@@ -16,33 +16,43 @@ from datetime import date
 
 
 # In[ ]:
+today = date.today()
+start_date = today.strftime("%d-%m")
 
-
-dataset_dir = '/home/pragnesh/project/Dataset/'; selected_dataset_dir = 'IntelIC'
+dataset_dir = '/home3/pragnesh/Dataset/';
+selected_dataset_dir = 'IntelIC'
 train_folder = 'train'; test_folder = 'test'
 
 # String Parameter for Model
-loadModel = False; is_transfer_learning = False
-
-program_name = 'vgg_net_kernel_pruning_3Aug'; model_dir = '/home/pragnesh/project/Model/'
+loadModel = False;
+is_transfer_learning = True
+program_name = 'vgg_net_kernel_pruning_dist';
+model_dir = '/home3/pragnesh/Model/'
 selectedModel = 'vgg16_IntelIc_Prune'
 load_path = f'{model_dir}{program_name}/{selected_dataset_dir}/{selectedModel}'
 
+# load_path = "/home3/pragnesh/Model/vgg_net_kernel_pruning_dist/IntelIC/vgg16_IntelIc_Prune"
 
 # In[ ]:
 
 
 # String parameter to Log Output
-logDir = '/home/pragnesh/project/Logs/'
+logDir = '/home3/pragnesh/Logs/'
+
+# /home3/pragnesh/Logs/vgg_net_kernel_pruning_dist/IntelIC/
 folder_path = f'{logDir}{program_name}/{selected_dataset_dir}/'
-logResultFile = f'{folder_path}result.log'
-outFile = f'{folder_path}lastResult.log'
-outLogFile = f'{folder_path}outLogFile.log'
+
+# /home3/pragnesh/Logs/vgg_net_kernel_pruning_dist/IntelIC/result.log
+logResultFile = f'{folder_path}result{start_date}.log'
+
+# /home3/pragnesh/Logs/vgg_net_kernel_pruning_dist/IntelIC/lastResult.log
+outFile = f'{folder_path}lastResult{start_date}.log'
+
+# /home3/pragnesh/Logs/vgg_net_kernel_pruning_dist/IntelIC/outLogFile.log
+outLogFile = f'{folder_path}outLogFile{start_date}.log'
 
 
 # In[ ]:
-
-
 if torch.cuda.is_available():
     device1 = torch.device('cuda')
 else:
@@ -50,26 +60,19 @@ else:
 
 
 # In[ ]:
-
-
 def ensure_dir(dir_path):
     directory = os.path.dirname(dir_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
 
 
-# In[ ]:
-
-
-ensure_dir(f'{model_dir}{program_name}/')  # dir /home/pragnesh/project/Model/vgg_net_kernel_pruning_3Aug/
+ensure_dir(f'{model_dir}{program_name}/')  # dir /home3/pragnesh/Model/vgg_net_kernel_pruning_3Aug/
 ensure_dir(f'{model_dir}{program_name}/{selected_dataset_dir}/')  # dir ~/vgg_net_kernel_pruning_3Aug/IntelIc/
-ensure_dir(f'{logDir}{program_name}')  # dir /home/pragnesh/project/Logs/program_name/
-ensure_dir(f'{logDir}{program_name}/{selected_dataset_dir}/')  # dir /home/pragnesh/project/Logs/program_name/IntelIC
+ensure_dir(f'{logDir}{program_name}')  # dir /home3/pragnesh/Logs/program_name/
+ensure_dir(f'{logDir}{program_name}/{selected_dataset_dir}/')  # dir /home3/pragnesh/Logs/program_name/IntelIC
 
 
 # In[ ]:
-
-
 dl.set_image_size(224)
 dl.set_batch_size = 16
 dataLoaders = dl.data_loader(set_datasets_arg=dataset_dir, selected_dataset_arg=selected_dataset_dir,
@@ -77,8 +80,6 @@ dataLoaders = dl.data_loader(set_datasets_arg=dataset_dir, selected_dataset_arg=
 
 
 # In[ ]:
-
-
 if loadModel:  # Load the saved trained model
     new_model = torch.load(load_path, map_location=torch.device(device1))
 else:  # Load the standard model from library
@@ -88,21 +89,22 @@ else:  # Load the standard model from library
 
 
 # In[ ]:
-
-
-today = date.today()
-d1 = today.strftime("%d-%m")
-print(f"\n...........OutLog For the {d1}................")
+print(f"\n...........OutLog For the {start_date}................")
 with open(outLogFile, 'a') as f:
-    f.write(f"\n\n..........................OutLog For the {d1}......................\n\n")
+    f.write(f"\n\n..........................OutLog For the {start_date}......................\n\n")
 f.close()
 
 
 # In[ ]:
 
 
-block_list = []; feature_list = []; conv_layer_index = []; module = []
-prune_count = []; new_list = []; candidate_conv_layer = []
+block_list = []
+feature_list = []
+conv_layer_index = []
+module = []
+prune_count = []
+new_list = []
+candidate_conv_layer = []
 layer_number = 0; st = 0; en = 0
 
 
@@ -110,24 +112,17 @@ layer_number = 0; st = 0; en = 0
 
 
 def initialize_lists_for_pruning():
-    global block_list, feature_list, conv_layer_index, module, prune_count, new_list, candidate_conv_layer
-    global layer_number, st, en
+    global block_list, feature_list, conv_layer_index, module, prune_count
+
     block_list = ip.create_block_list(new_model)  # ip.getBlockList('vgg16')
     feature_list = ip.create_feature_list(new_model)
     conv_layer_index = ip.find_conv_index(new_model)
     module = ip.make_list_conv_param(new_model)
     prune_count = ip.get_prune_count(module=module, blocks=block_list, max_pr=.1)
-    new_list = []
-    layer_number = 0
-    st = 0
-    en = 0
-    candidate_conv_layer = []
+
 
 initialize_lists_for_pruning()
-
-
 # In[ ]:
-
 
 def compute_conv_layer_dist_channel_pruning(module_cand_conv, block_list_l, block_id):
     global layer_number
@@ -159,8 +154,6 @@ def compute_conv_layer_dist_channel_pruning(module_cand_conv, block_list_l, bloc
 
 
 # In[ ]:
-
-
 class ChannelPruningMethodSimilarities(prune.BasePruningMethod):
     PRUNING_TYPE = 'unstructured'
 
