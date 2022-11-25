@@ -65,8 +65,6 @@ def compute_distance_score_kernel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amoun
 
 
 # In[3]:
-
-
 def compute_saliency_score_kernel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amount=1):
     # dims = all axes, except for the one identified by `dim`
     dim_to_prune = list(range(tensor_t.dim()))  # initially it has all dims
@@ -105,8 +103,6 @@ def compute_saliency_score_kernel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amoun
 
 
 # In[4]:
-
-
 def compute_distance_score_channel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amount=1):
     size = tensor_t.shape
     scale_tensor = torch.zeros_like(tensor_t)
@@ -137,8 +133,6 @@ def compute_distance_score_channel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amou
 
 
 # In[5]:
-
-
 def compute_saliency_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=1):
     dim_to_prune = list(range(tensor_t.dim()))
     for i in range(len(dim_to_keep)):
