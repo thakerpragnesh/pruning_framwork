@@ -111,9 +111,6 @@ def update_feature_list(feature_list_l, prune_count_update, start=0, end=len(pru
 
 # In[ ]:
 def compute_conv_layer_dist_kernel_pruning(module_candidate_convolution, block_list_l, block_id):
-    with open(outLogFile, "a") as out_file:
-        out_file.write("\nExecuting Compute Candidate Convolution Layer")
-    out_file.close()
     global layer_number
     candidate_convolution_layer = []
     end_index = 0
@@ -122,14 +119,8 @@ def compute_conv_layer_dist_kernel_pruning(module_candidate_convolution, block_l
         end_index = end_index + block_list_l[bl]
         if bl != block_id:
             continue
-        with open(outLogFile, "a") as out_file:
-            out_file.write(f'\nblock ={bl} blockSize={block_list_l[bl]}, start={start_index}, End={end_index}')
-        out_file.close()
         for lno in range(start_index, end_index):
             # layer_number =st+i
-            with open(outLogFile, 'a') as out_file:
-                out_file.write(f"\nlno in compute candidate {lno}")
-            out_file.close()
             candidate_convolution_layer.append(
                 fp.compute_distance_score_kernel(
                     module_candidate_convolution[lno]._parameters['weight'],
@@ -138,6 +129,7 @@ def compute_conv_layer_dist_kernel_pruning(module_candidate_convolution, block_l
     return candidate_convolution_layer
 
 
+# In[]: Driver function from facilitate_pruning
 '''
 def compute_distance_score_kernel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amount=1):
     # dims = all axes, except for the one identified by `dim`
@@ -183,9 +175,11 @@ def compute_distance_score_kernel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amoun
                             max_value = idx_tuple[new_max_idx][3]
                             max_idx = new_max_idx
         kernel_list_distance.append(idx_tuple)
-    return kernel_list_distance '''
+    return kernel_list_distance 
+'''
 
 
+# In[]
 class KernelPruningSimilarities(prune.BasePruningMethod):
     PRUNING_TYPE = 'unstructured'
     def compute_mask(self, t, default_mask):
@@ -209,7 +203,6 @@ class KernelPruningSimilarities(prune.BasePruningMethod):
         return mask
 
 
-# In[ ]:
 def kernel_unstructured_similarities(kernel_module, name):
     KernelPruningSimilarities.apply(kernel_module, name)
     return kernel_module
