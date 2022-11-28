@@ -134,6 +134,7 @@ def compute_distance_score_channel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amou
 
 # In[5]:
 def compute_saliency_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=1):
+    INF = 10000.0
     dim_to_prune = list(range(tensor_t.dim()))
     for i in range(len(dim_to_keep)):
         dim_to_prune.remove(dim_to_keep[i])
@@ -144,19 +145,17 @@ def compute_saliency_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=
     channel_norm = torch.norm(tensor_t, p=1, dim=dim_to_prune)
     channel_norm_temp = torch.norm(tensor_t, p=1, dim=dim_to_prune)
     score_value = []
-    for i in range(size[0]):
-        min_idx = i
-        for j in range(i, size[0]):
+
+    for i in range(prune_amount):
+        min_idx = 0
+        for j in range(size[0]):
             if channel_norm_temp[min_idx] > channel_norm_temp[j]:
                 min_idx = j
         score_value.append([min_idx, channel_norm[min_idx]])
-        channel_norm_temp[min_idx] = 10000.0
+        channel_norm_temp[min_idx] = INF
 
-    score_value_list = []
-    for i in range(prune_amount):
-        score_value_list.append(score_value[i])
+    return score_value
 
-    return score_value_list
 
 
 # In[ ]:

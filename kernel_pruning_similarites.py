@@ -188,7 +188,7 @@ class KernelPruningSimilarities(prune.BasePruningMethod):
         log_file.close()
         mask = default_mask.clone()
         # mask.view(-1)[::2] = 0
-        size = t.shape
+        size = t.shape        
         print(f"\n{size}")
         with open(outLogFile, "a") as log_file:
             log_file.write(f'\nLayer Number:{layer_number} \nstart={st} \nlength of new list={len(new_list)}')
