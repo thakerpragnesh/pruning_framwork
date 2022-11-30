@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]: Import all the require files
+# In[0]: Import all the require files
 import torch
 import load_dataset as dl
 import load_model as lm
@@ -12,52 +12,37 @@ import torch.nn.utils.prune as prune
 import os  # use to access the files
 from datetime import date
 
+
 # In[1]
 today = date.today()
 d1 = today.strftime("%d_%m") #ex "27_11"
 
 # In[]
-
-program_name = 'vgg_net_kernel_pruning'
-selectedModel = 'vgg16_IntelIc_Prune'
+program_name = 'channel_pruning_saliency'
 selected_dataset_dir = 'IntelIC'
 
-dir_home_path = '/home3/pragnesh/'
+dir_home_path = '/home/pragnesh/'
 dir_specific_path =f'{program_name}/{selected_dataset_dir}'
 
-model_dir   = f"{dir_home_path}Model/{dir_specific_path}"
-dataset_dir = f"{dir_home_path}Dataset/{selected_dataset_dir}" 
-log_dir     = f"{dir_home_path}Logs/{dir_specific_path}" 
-
-
-
-# In[2]: String parameter for dataset
-#dataset_dir = '/home3/pragnesh/Dataset/';
-#selected_dataset_dir = 'IntelIC'
+dataset_dir  = f"{dir_home_path}Dataset/{selected_dataset_dir}" 
 train_folder = 'train'
-test_folder = 'test'
+test_folder  = 'test'
 
-# In[3]: String Parameter for Model
-loadModel = False
+model_dir   = f"{dir_home_path}Model/{dir_specific_path}"
+isLoadModel = False
 is_transfer_learning = False
-#program_name = 'vgg_net_kernel_pruning'
-#model_dir = '/home3/pragnesh/Model/'
-#selectedModel = 'vgg16_IntelIc_Prune'
+if isLoadModel:
+    selectedModel = 'vgg16_IntelIc_Prune'
+    load_path = f'{model_dir}/{selectedModel}'
+else:
+    selectedModel = ""
+    load_path = ""
+    
 
-dir_home_path = '/home3/pragnesh/'
-dir_specific_path ='{program_name}/{selected_dataset_dir}'
-
-# /home3/pragnesh/Model/vgg_net_kernel_pruning/IntelIC/vgg16_IntelIc_Prune
-#load_path = f'{model_dir}{program_name}/{selected_dataset_dir}/{selectedModel}'
-load_path = f'{model_dir}/{selectedModel}'
-
-# In[4]: String parameter to Log Output
-logDir = '/home3/pragnesh/Logs/'
-folder_path = f'{logDir}{program_name}/{selected_dataset_dir}/'
-logResultFile = f'{folder_path}result.log'
-outFile = f'{folder_path}lastResult.log'
-outLogFile = f'{folder_path}outLogFile.log'
-
+log_dir = f"{dir_home_path}Logs/{dir_specific_path}" 
+logResultFile = f'{log_dir}/result.log'
+outFile = f'{log_dir}/lastResult.log'
+outLogFile = f'{log_dir}/outLogFile.log'
 
 # In[5]: Check Cuda Devices
 if torch.cuda.is_available():
@@ -75,20 +60,23 @@ def ensure_dir(dir_path):
 
 
 # In[7]: Create output files if not present
-ensure_dir(f'{model_dir}{program_name}/')
-ensure_dir(f'{model_dir}{program_name}/{selected_dataset_dir}/')
-ensure_dir(f'{logDir}{program_name}')
-ensure_dir(f'{logDir}{program_name}/{selected_dataset_dir}/')
+
+ensure_dir(f"{dir_home_path}Model/{program_name}/")
+ensure_dir(f'{model_dir}/')
+
+ensure_dir(f'{dir_home_path}Logs/{program_name}/')
+ensure_dir(f'{log_dir}/')
 
 # In[8]: Set Image Properties
 dl.set_image_size(224)
 dl.set_batch_size = 16
 dataLoaders = dl.data_loader(set_datasets_arg=dataset_dir,
-                             selected_dataset_arg=selected_dataset_dir,
+                             selected_dataset_arg='',
                              train_arg=train_folder, test_arg=test_folder)
 
 # In[9]: Load appropriate model
-if loadModel:  # Load the saved trained model
+is_transfer_learning =True
+if isLoadModel:  # Load the saved trained model
     new_model = torch.load(load_path, map_location=torch.device(device1))
 else:  # Load the standard model from library
     new_model = lm.load_model(model_name='vgg16', number_of_class=6,
@@ -109,7 +97,9 @@ def initialize_lists_for_pruning():
     conv_layer_index = ip.find_conv_index(new_model)
     prune_count = ip.get_prune_count(module=module, blocks=block_list, max_pr=.1)
     module = ip.make_list_conv_param(new_model)
-
+    print(prune_count)
+    
+initialize_lists_for_pruning()
 
 # In[13] Function to update the feature list after pruning
 def update_feature_list(feature_list_l, prune_count_update, start=0, end=len(prune_count)):
@@ -129,7 +119,7 @@ def update_feature_list(feature_list_l, prune_count_update, start=0, end=len(pru
     return feature_list_l
 
 
-# In[ ]:
+# In[14 ]:
 def compute_conv_layer_saliency_channel_pruning(module_cand_conv, block_list_l, block_id, k=1):
     global layer_number
     candidate_convolution_layer = []
@@ -142,9 +132,12 @@ def compute_conv_layer_saliency_channel_pruning(module_cand_conv, block_list_l, 
 
         for lno in range(start_index, end_index):
             # layer_number =st+i
+            # tensor_t, n=1, dim_to_keep=[0, 1], prune_amount=1
             candidate_convolution_layer.append(fp.compute_saliency_score_channel(
-                module_cand_conv[lno]._parameters['weight'],
-                n=1, dim_to_keep=[0], k=prune_count[lno]))
+                tensor_t=module_cand_conv[lno]._parameters['weight'],
+                n=1,
+                dim_to_keep=[0],
+                prune_amount = prune_count[lno]))
         break
     return candidate_convolution_layer
 
@@ -158,8 +151,6 @@ def compute_saliency_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=
         dim_to_prune.remove(dim_to_keep[i])
 
     size = tensor_t.shape
-    print(size)
-    print(dim_to_keep)
     channel_norm = torch.norm(tensor_t, p=1, dim=dim_to_prune)
     channel_norm_temp = torch.norm(tensor_t, p=1, dim=dim_to_prune)
     score_value = []
@@ -170,10 +161,9 @@ def compute_saliency_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=
                 min_idx = j
         score_value.append([min_idx, channel_norm[min_idx]])
         channel_norm_temp[min_idx] = INF
-
     return score_value
 '''
-# In[ ]:
+# In[15]:
 class ChannelPruningMethodSaliency(prune.BasePruningMethod):
     PRUNING_TYPE = 'unstructured'
 
@@ -181,7 +171,7 @@ class ChannelPruningMethodSaliency(prune.BasePruningMethod):
         mask = default_mask.clone()
         i=layer_number-layer_base
         for j in range(len(new_list[i])):
-            k = new_list[i][j]
+            k = new_list[i][j][0]
             mask[k] =0
             
         return mask
@@ -190,7 +180,7 @@ def channel_unstructured_saliency(module, name):
     ChannelPruningMethodSaliency.apply(module, name)
     return module
 
-# In[ ]:
+# In[16]:
 layer_base=0
 def iterative_channel_pruning_saliency_block_wise(new_model_arg, prune_module, 
                                              block_list_l, prune_epochs):
@@ -207,7 +197,7 @@ def iterative_channel_pruning_saliency_block_wise(new_model_arg, prune_module,
         end = len(block_list_l)
         for blkId in range(start, end):
             # 2 Compute distance between kernel for candidate conv layer
-            new_list = compute_conv_layer_saliency_channel_pruning(module_candidate_convolution=prune_module,
+            new_list = compute_conv_layer_saliency_channel_pruning(module_cand_conv=prune_module,
                                                                    block_list_l=block_list_l, block_id=blkId)
             # 5 perform Custom pruning where we mask the prune weight
             for j in range(block_list_l[blkId]):
@@ -257,6 +247,8 @@ def iterative_channel_pruning_saliency_block_wise(new_model_arg, prune_module,
         # # # 10. Evaluate the pruned model
         train_accuracy = 0.0
         test_accuracy = 0.0
+        train_accuracy = tm.evaluate(temp_model,dataLoaders[dl.trainDir])
+        test_accuracy  = tm.evaluate(temp_model,dataLoaders[dl.testDir])
 
         with open(outFile, 'a') as out_file:
             out_file.write(f'\n output of the {e}th iteration is written below\n')
@@ -269,7 +261,7 @@ def iterative_channel_pruning_saliency_block_wise(new_model_arg, prune_module,
         torch.save(temp_model, save_path)
 
 
-# In[ ]:
+# In[17]:
 initialize_lists_for_pruning()
 iterative_channel_pruning_saliency_block_wise(new_model_arg=new_model, 
     prune_module=module, block_list_l=block_list, prune_epochs=6)

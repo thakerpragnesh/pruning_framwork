@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]: Import all the require files
+# In[0]: Import all the require files
 import torch
 import load_dataset as dl
 import load_model as lm
@@ -12,31 +12,37 @@ import torch.nn.utils.prune as prune
 import os  # use to access the files
 from datetime import date
 
+
+# In[1]
 today = date.today()
-d1 = today.strftime("%d-%m")
+d1 = today.strftime("%d_%m") #ex "27_11"
 
-# In[2]: String parameter for dataset
-dataset_dir = '/home3/pragnesh/Dataset/';
+# In[]
+program_name = 'channel_pruning_saliency'
 selected_dataset_dir = 'IntelIC'
+
+dir_home_path = '/home/pragnesh/'
+dir_specific_path =f'{program_name}/{selected_dataset_dir}'
+
+dataset_dir  = f"{dir_home_path}Dataset/{selected_dataset_dir}" 
 train_folder = 'train'
-test_folder = 'test'
+test_folder  = 'test'
 
-# In[3]: String Parameter for Model
-loadModel = False
+model_dir   = f"{dir_home_path}Model/{dir_specific_path}"
+isLoadModel = False
 is_transfer_learning = False
-program_name = 'vgg_net_kernel_pruning'
-model_dir = '/home3/pragnesh/Model/'
-selectedModel = 'vgg16_IntelIc_Prune'
-# /home3/pragnesh/Model/vgg_net_kernel_pruning/IntelIC/vgg16_IntelIc_Prune
-load_path = f'{model_dir}{program_name}/{selected_dataset_dir}/{selectedModel}'
+if isLoadModel:
+    selectedModel = 'vgg16_IntelIc_Prune'
+    load_path = f'{model_dir}/{selectedModel}'
+else:
+    selectedModel = ""
+    load_path = ""
+    
 
-# In[4]: String parameter to Log Output
-logDir = '/home3/pragnesh/project/Logs/'
-folder_path = f'{logDir}{program_name}/{selected_dataset_dir}/'
-logResultFile = f'{folder_path}result.log'
-outFile = f'{folder_path}lastResult.log'
-outLogFile = f'{folder_path}outLogFile.log'
-
+log_dir = f"{dir_home_path}Logs/{dir_specific_path}" 
+logResultFile = f'{log_dir}/result.log'
+outFile = f'{log_dir}/lastResult.log'
+outLogFile = f'{log_dir}/outLogFile.log'
 
 # In[5]: Check Cuda Devices
 if torch.cuda.is_available():
@@ -46,7 +52,6 @@ else:
 
 opt_func = torch.optim.Adam
 
-
 # In[6]: Function to create folder if not exist
 def ensure_dir(dir_path):
     directory = os.path.dirname(dir_path)
@@ -55,20 +60,28 @@ def ensure_dir(dir_path):
 
 
 # In[7]: Create output files if not present
-ensure_dir(f'{model_dir}{program_name}/')
-ensure_dir(f'{model_dir}{program_name}/{selected_dataset_dir}/')
-ensure_dir(f'{logDir}{program_name}')
-ensure_dir(f'{logDir}{program_name}/{selected_dataset_dir}/')
+#print(f"{dir_home_path}Model/{program_name}/")
+#ensure_dir(f"{dir_home_path}Model/{program_name}/")
+
+print(model_dir)
+ensure_dir(f'{model_dir}/')
+
+#print(f'{dir_home_path}Logs/{program_name}/')
+#ensure_dir(f'{dir_home_path}Logs/{program_name}/')
+
+print(log_dir)
+ensure_dir(f'{log_dir}/')
 
 # In[8]: Set Image Properties
 dl.set_image_size(224)
 dl.set_batch_size = 16
 dataLoaders = dl.data_loader(set_datasets_arg=dataset_dir,
-                             selected_dataset_arg=selected_dataset_dir,
+                             selected_dataset_arg='',
                              train_arg=train_folder, test_arg=test_folder)
 
 # In[9]: Load appropriate model
-if loadModel:  # Load the saved trained model
+is_transfer_learning =True
+if isLoadModel:  # Load the saved trained model
     new_model = torch.load(load_path, map_location=torch.device(device1))
 else:  # Load the standard model from library
     new_model = lm.load_model(model_name='vgg16', number_of_class=6,
@@ -89,8 +102,9 @@ def initialize_lists_for_pruning():
     conv_layer_index = ip.find_conv_index(new_model)
     prune_count = ip.get_prune_count(module=module, blocks=block_list, max_pr=.1)
     module = ip.make_list_conv_param(new_model)
-
-
+    print(prune_count)
+    
+    
 # In[13] Function to update the feature list after pruning
 def update_feature_list(feature_list_l, prune_count_update, start=0, end=len(prune_count)):
     with open(outLogFile, "a") as out_file:
@@ -107,6 +121,7 @@ def update_feature_list(feature_list_l, prune_count_update, start=0, end=len(pru
             j += 1
             i += 1
     return feature_list_l
+
 
 
 # In[ ]:

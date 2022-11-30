@@ -8,8 +8,6 @@ import torch
 
 
 # In[2]:
-
-
 def compute_distance_score_kernel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amount=1):
     # dims = all axes, except for the one identified by `dim`
     dim_to_prune = list(range(tensor_t.dim()))  # initially it has all dims
@@ -158,8 +156,45 @@ def compute_saliency_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=
 
 
 
-# In[ ]:
+# In[6]:
+    
 
+def deep_copy_kernel(destination_model, source_model):
+    for i in range(len(source_model.features)):
+        
+        if str(source_model.features[i]).find('Conv') != -1:
+            print("\n   value :", i, "conv value", str(source_model.features[i]).find('Conv'))
+            size_org = source_model.features[i]._parameters['weight'].shape
+            size_new = destination_model.features[i]._parameters['weight'].shape
+            for fin_org in range(size_org[1]):
+                j = 0
+                fin_new = fin_org
+                for fout in range(size_org[0]):
+                    if torch.norm(source_model.features[i]._parameters['weight'][fout][fin_org]) != 0:
+                        fin_new += 1
+                        if j >= size_new[0] or fin_new >= size_new[1]:
+                            break
+                        t = source_model.features[i]._parameters['weight'][fout][fin_org]
+                        destination_model.features[i]._parameters['weight'][j][fin_new] = t
+                        j = j + 1
+
+def deep_copy_channel(source_model, dest_model, new_feature_list):
+    for l in range(len(source_model.features)):
+        if str(source_model.features[l]).find('Conv') != -1:
+            source_size = source_model.features[l]._parameters['weight'].shape
+            dest_size = dest_model.features[l]._parameters['weight'].shape
+            
+            dest_n_l =0
+            for source_n_l in range(len(source_size[0])):
+                if torch.norm(source_model.features[l]._parameters['weight'][source_n_l]) != 0:
+                    dest_model.features[l]._parameters['weight'][dest_n_l] = source_model.features[l]._parameters['weight'][source_n_l]
+                    dest_n_l = dest_n_l+1
+                
+                if dest_n_l >=dest_size[0]:
+                    break
+            
+            return 0
+    
 
 
 

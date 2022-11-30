@@ -6,6 +6,7 @@
 import torch  # Elementary function of tensor is are in torch package
 import torch.nn as nn  # Several layer architecture
 import torch.nn.functional as F  # loss function and activation function
+from datetime import date
 
 """
 Computer vision is one of the most important application and thus lots 
@@ -115,7 +116,14 @@ def get_lr(optimizer):
 # Main Function To Implement Training
 def fit_one_cycle(dataloaders, train_dir, test_dir,
                   model_name, model, device_l=torch.device('cpu'),
-                  epochs=1, max_lr=.01, weight_decay=0, L1=0, grad_clip=None, opt_func=torch.optim.SGD, log_file=''):
+                  epochs=1, max_lr=.01, weight_decay=0, L1=0, 
+                  grad_clip=None, opt_func=torch.optim.SGD, 
+                  log_file=""):
+    
+
+    today = date.today()
+    d1 = today.strftime("%d_%m") #ex "27_11"
+    
     torch.cuda.empty_cache()
     global device
     device = device_l
@@ -128,51 +136,58 @@ def fit_one_cycle(dataloaders, train_dir, test_dir,
     lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr, epochs=epochs,
                                                 steps_per_epoch=len(dataloaders[train_dir]))
     print("Training Starts")
-    with open(log_file, "a") as f:
-        f.write("\nTraining Starts \n")
-        for epoch in range(epochs):
-            # Training Phase
-            model.train()
-            train_losses = []
-            lrs = []
+    if log_file !="":
+        with open(log_file, "a") as f:
+            f.write("\nTraining Starts on ",d1,"\n")
+        f.close()
+    
+    for epoch in range(epochs):
+        # Training Phase
+        model.train()
+        train_losses = []
+        lrs = []
 
-            # for batch in train_loader:
-            for batch_X, batch_y in dataloaders[train_dir]:
-                # compute the training loss of current batch
-                loss = compute_batch_loss(model, batch_X, batch_y)
-                l1_crit = nn.L1Loss()
-                reg_loss = 0
-                for param in model.parameters():
-                    reg_loss += l1_crit(param, target=torch.zeros_like(param))
-                loss += L1 * reg_loss
+        # for batch in train_loader:
+        for batch_X, batch_y in dataloaders[train_dir]:
+            # compute the training loss of current batch
+            loss = compute_batch_loss(model, batch_X, batch_y)
+            l1_crit = nn.L1Loss()
+            reg_loss = 0
+            for param in model.parameters():
+                reg_loss += l1_crit(param, target=torch.zeros_like(param))
+            loss += L1 * reg_loss
 
-                train_losses.append(loss)
-                loss.backward()  # compute the gradient of all weights
-                # Clip the gradient value to maximum allowed grad_clip value
-                if grad_clip:
-                    nn.utils.clip_grad_value_(model.parameters(), grad_clip)
-                optimizer.step()  # Updates weights
-                # pytorch by default accumulate grade history and if we don't want it
-                # we should make all previous grade value equals to zero
-                optimizer.zero_grad()
-                # Record & update learning rate
-                lrs.append(get_lr(optimizer))
-                lr_scheduler.step()  # Update the learning rate
-                # Compute Validation Loss and Validation Accuracy
-                result = evaluate(model, dataloaders[test_dir])
-                # Compute Train Loss of whole epoch i.e. mean of loss of batch
-                result['train_loss'] = torch.stack(train_losses).mean().item()
-                # Observe how learning rate is change by schedular
-                result['lrs'] = lrs
-                # print the observation of each epoch in a proper format
+            train_losses.append(loss)
+            loss.backward()  # compute the gradient of all weights
+            # Clip the gradient value to maximum allowed grad_clip value
+            if grad_clip:
+                nn.utils.clip_grad_value_(model.parameters(), grad_clip)
+            optimizer.step()  # Updates weights
+            # pytorch by default accumulate grade history and if we don't want it
+            # we should make all previous grade value equals to zero
+            optimizer.zero_grad()
+            # Record & update learning rate
+            lrs.append(get_lr(optimizer))
+            lr_scheduler.step()  # Update the learning rate
+            # Compute Validation Loss and Validation Accuracy
+            result = evaluate(model, dataloaders[test_dir])
+            # Compute Train Loss of whole epoch i.e. mean of loss of batch
+            result['train_loss'] = torch.stack(train_losses).mean().item()
+            # Observe how learning rate is change by schedular
+            result['lrs'] = lrs
+            # print the observation of each epoch in a proper format
 
-            # str_result = "Epoch [{}], last_lr: {:.5f}, train_loss: {:.4f}, val_loss: {:.4f},
-            # val_acc: {:.4f}".format(epoch, result['lrs'][-1],
-            # result['train_loss'], result['val_loss'], result['val_acc'])
-            str_result = epoch_end(epoch, result)
+        # str_result = "Epoch [{}], last_lr: {:.5f}, train_loss: {:.4f}, val_loss: {:.4f},
+        # val_acc: {:.4f}".format(epoch, result['lrs'][-1],
+        # result['train_loss'], result['val_loss'], result['val_acc'])
+        str_result = epoch_end(epoch, result)
 
-            f.write(f"{model_name}-\t{str_result}\n")
-            print(str_result)
-            history.append(result)  # append tuple result with val_acc, val_loss, and train_loss
+        if log_file !="":
+            with open(log_file, "a") as f:
+                f.write(f"{model_name} - {d1} - {str_result}\n")
+            f.close()
+        
+        print(str_result)
+        history.append(result)  # append tuple result with val_acc, val_loss, and train_loss
 
     return history
