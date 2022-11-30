@@ -40,23 +40,15 @@ test_folder = 'test'
 # In[3]: String Parameter for Model
 loadModel = False
 is_transfer_learning = False
-#program_name = 'vgg_net_kernel_pruning'
-#model_dir = '/home3/pragnesh/Model/'
-#selectedModel = 'vgg16_IntelIc_Prune'
 
-dir_home_path = '/home3/pragnesh/'
-dir_specific_path ='{program_name}/{selected_dataset_dir}'
-
-# /home3/pragnesh/Model/vgg_net_kernel_pruning/IntelIC/vgg16_IntelIc_Prune
-#load_path = f'{model_dir}{program_name}/{selected_dataset_dir}/{selectedModel}'
 load_path = f'{model_dir}/{selectedModel}'
 
 # In[4]: String parameter to Log Output
-logDir = '/home3/pragnesh/Logs/'
-folder_path = f'{logDir}{program_name}/{selected_dataset_dir}/'
-logResultFile = f'{folder_path}result.log'
-outFile = f'{folder_path}lastResult.log'
-outLogFile = f'{folder_path}outLogFile.log'
+#logDir = '/home3/pragnesh/Logs/'
+#folder_path = f'{logDir}{program_name}/{selected_dataset_dir}/'
+logResultFile = f'{log_dir}/result.log'
+outFile = f'{log_dir}/lastResult.log'
+outLogFile = f'{log_dir}/outLogFile.log'
 
 
 # In[5]: Check Cuda Devices
@@ -75,10 +67,10 @@ def ensure_dir(dir_path):
 
 
 # In[7]: Create output files if not present
-ensure_dir(f'{model_dir}{program_name}/')
-ensure_dir(f'{model_dir}{program_name}/{selected_dataset_dir}/')
-ensure_dir(f'{logDir}{program_name}')
-ensure_dir(f'{logDir}{program_name}/{selected_dataset_dir}/')
+ensure_dir(f'{dir_home_path}Model/{program_name}/')
+ensure_dir(model_dir)
+ensure_dir(f'{dir_home_path}Logs/{program_name}/')
+ensure_dir(log_dir)
 
 # In[8]: Set Image Properties
 dl.set_image_size(224)
@@ -189,6 +181,15 @@ class ChannelPruningMethodSaliency(prune.BasePruningMethod):
 def channel_unstructured_saliency(module, name):
     ChannelPruningMethodSaliency.apply(module, name)
     return module
+
+# In[] Deep Copy
+
+
+
+
+
+
+
 
 # In[ ]:
 layer_base=0
