@@ -138,7 +138,7 @@ def fit_one_cycle(dataloaders, train_dir, test_dir,
     print("Training Starts")
     if log_file !="":
         with open(log_file, "a") as f:
-            f.write("\nTraining Starts on ",d1,"\n")
+            f.write(f"\nTraining Starts on {d1}\n")
         f.close()
     
     for epoch in range(epochs):

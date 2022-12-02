@@ -101,17 +101,23 @@ def compute_saliency_score_kernel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amoun
 
 
 # In[4]:
-def compute_distance_score_channel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amount=1):
-    size = tensor_t.shape
+def compute_distance_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=1):
+    size_org = tensor_t.shape
+    #print(size_org)
     scale_tensor = torch.zeros_like(tensor_t)
+    # size_new = scale_tensor.shape
+    
     dist_score_channel = []
-    for i in range(size[0]):
-        scale_tensor = tensor_t[i]/torch.norm(tensor_t[[i]])
+    for i in range(size_org[0]):
+        scale_tensor[i] = tensor_t[i]/torch.norm(tensor_t[i])
     max_val = 0
     max_idx = 0
-    for i1 in range(size[0]):
-        for i2 in range(i1+1, size[0]):
-            score_val = torch.norm(scale_tensor[i1]-scale_tensor[i2])
+    for i1 in range(size_org[0]-1):
+        #print(size_org[0])
+        for i2 in range(i1+1,size_org[0]-1):
+            #print("i1 = ",i1,",  i2 = ",i2)
+            t = scale_tensor[i1]-scale_tensor[i2]
+            score_val = torch.norm(t)
             if len(dist_score_channel) < prune_amount:
                 dist_score_channel.append([i1, i2, score_val])
                 if max_val < score_val:
@@ -128,7 +134,14 @@ def compute_distance_score_channel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amou
                             max_idx = prune_amount
 
     return dist_score_channel
-
+# t = torch.rand(128,64,3, 3)
+# st = t/torch.norm(t)
+# print()
+# #size = t.shape
+# #for i in range(size[0]):
+# #    print(t[i])
+# dist=compute_distance_score_channel(tensor_t=t, n=1, dim_to_keep=[0],prune_amount=4)
+# print(dist)
 
 # In[5]:
 def compute_saliency_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=1):
