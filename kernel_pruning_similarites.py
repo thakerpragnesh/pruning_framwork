@@ -11,7 +11,7 @@ import facilitate_pruning as fp
 import torch.nn.utils.prune as prune
 import os  # use to access the files
 from datetime import date
-
+import copy 
 today = date.today()
 d1 = today.strftime("%d-%m")
 
@@ -245,13 +245,16 @@ def iterative_kernel_pruning_dist_block_wise(new_model_arg, prune_module,
         feature_list = update_feature_list(
             feature_list, prune_count, start=0, end=len(prune_count))
         # 8.  Create new temp model with updated feature list
+        '''
         temp_model = lm.create_vgg_from_feature_list(
             vgg_feature_list=feature_list, batch_norm=True)
         temp_model.to(device1)
         # 9.  Perform deep copy
         lm.freeze(temp_model, 'vgg16')
-        deep_copy(temp_model, new_model_arg)
+        #deep_copy(temp_model, new_model_arg)
         lm.unfreeze(temp_model)
+        '''
+        temp_model = copy.d
         # 10.  Train pruned model
         with open(outLogFile, 'a') as out_file:
             out_file.write('\n ...Deep Copy Completed...')

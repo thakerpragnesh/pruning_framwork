@@ -177,7 +177,86 @@ def channel_unstructured_similarities(kernel_module, name):
 initialize_lists_for_pruning()
 
 # In[ ]:
+layer_base=0
+def iterative_channel_pruning_similarities_block_wise(new_model_arg, prune_module, 
+                                             block_list_l, prune_epochs):
+    with open(outLogFile, "a") as out_file:
+        out_file.write("\nPruning Process Start")
+    out_file.close()
+    # pc = [1, 3, 9, 26, 51]
+    
+    global new_list
+    global layer_base
+    
+    for e in range(prune_epochs):
+        start = 0
+        end = len(block_list_l)
+        for blkId in range(start, end):
+            # 2 Compute distance between kernel for candidate conv layer
+            new_list = compute_conv_layer_dist_channel_pruning(module_cand_conv=prune_module,
+                                                                   block_list_l=block_list_l, block_id=blkId)
+            # 5 perform Custom pruning where we mask the prune weight
+            for j in range(block_list_l[blkId]):
+                if blkId < 2:
+                    layer_number_to_prune = (blkId * 2) + j
+                else:  # blkId >= 2:
+                    layer_number_to_prune = 4 + (blkId - 2) * 3 + j
+                channel_unstructured_similarities(
+                    module=prune_module[layer_number_to_prune], 
+                    name='weight')
+            new_list = None
+        # 6.  Commit Pruning
+        for i in range(len(prune_module)):
+            prune.remove(module=prune_module[i], name='weight')
+        # 7.  Update feature list
+        global feature_list
+        feature_list = update_feature_list(
+            feature_list, prune_count, start=0, end=len(prune_count))
+        # 8.  Create new temp model with updated feature list
+        temp_model = lm.create_vgg_from_feature_list(
+            vgg_feature_list=feature_list, batch_norm=True)
+        temp_model.to(device1)
+        
+        
+        # 9.  Perform deep copy
+        lm.freeze(temp_model, 'vgg16')
+        fp.deep_model_copy_channelwise(new_model, temp_model, feature_list)
+        #deep_copy(temp_model, new_model_arg)
+        lm.unfreeze(temp_model)
+        
+        
+        # 10.  Train pruned model
+        with open(outLogFile, 'a') as out_file:
+            out_file.write('\n ...Deep Copy Completed...')
+            out_file.write('\n Fine tuning started....')
+        out_file.close()
+
+        tm.fit_one_cycle( dataloaders=dataLoaders,
+                          train_dir=dl.train_directory, test_dir=dl.test_directory,
+                          # Select a variant of VGGNet
+                          model_name='vgg16', model=temp_model, device_l=device1,
+                          # Set all the Hyper-Parameter for training
+                          epochs=8, max_lr=0.001, weight_decay=0.01, L1=0.01, grad_clip=0.1,
+                          opt_func=opt_func, log_file=logResultFile)
+        
+        save_path = f'{model_dir}{program_name}/{selected_dataset_dir}/vgg16_IntelIc_Prune_{e}_b_train'
+        torch.save(temp_model, save_path)
+        # # # 10. Evaluate the pruned model
+        train_accuracy = 0.0
+        test_accuracy = 0.0
+
+        with open(outFile, 'a') as out_file:
+            out_file.write(f'\n output of the {e}th iteration is written below\n')
+            out_file.write(f'\n Train Accuracy: {train_accuracy}'
+                           f'\n Test Accuracy  :  {test_accuracy} \n')
+        out_file.close()
+
+        save_path = f'{model_dir}{program_name}/selected/dataset_dir/vgg16_IntelIc_Prune_{e}_b_train'
+        # save_path = f'/home3/pragnesh/Model/vgg16_IntelIc_Prune_{e}_b_train'
+        torch.save(temp_model, save_path)
 
 
-
-
+# In[ ]:
+initialize_lists_for_pruning()
+iterative_channel_pruning_similarities_block_wise(new_model_arg=new_model, 
+    prune_module=module, block_list_l=block_list, prune_epochs=6)

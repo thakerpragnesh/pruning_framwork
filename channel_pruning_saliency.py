@@ -12,74 +12,66 @@ import torch.nn.utils.prune as prune
 import os  # use to access the files
 from datetime import date
 
-# In[1]
+# In[2]: Set date to store information in the logs 
 today = date.today()
 d1 = today.strftime("%d_%m") #ex "27_11"
 
-# In[]
+# In[3] Set pathe of all the directories
 
+# Specific Dir for selected program and dataset 
 program_name = 'vgg_net_kernel_pruning'
 selectedModel = 'vgg16_IntelIc_Prune'
 selected_dataset_dir = 'IntelIC'
 
+# Common Dir use at many loc
 dir_home_path = '/home3/pragnesh/'
 dir_specific_path =f'{program_name}/{selected_dataset_dir}'
 
+# Model Paths
 model_dir   = f"{dir_home_path}Model/{dir_specific_path}"
+loadModel = False
+load_path = f'{model_dir}/{selectedModel}'
+is_transfer_learning = False
+
+# Dataset Paths
 dataset_dir = f"{dir_home_path}Dataset/{selected_dataset_dir}" 
-log_dir     = f"{dir_home_path}Logs/{dir_specific_path}" 
-
-
-
-# In[2]: String parameter for dataset
-#dataset_dir = '/home3/pragnesh/Dataset/';
-#selected_dataset_dir = 'IntelIC'
 train_folder = 'train'
 test_folder = 'test'
 
-# In[3]: String Parameter for Model
-loadModel = False
-is_transfer_learning = False
-
-load_path = f'{model_dir}/{selectedModel}'
-
-# In[4]: String parameter to Log Output
-#logDir = '/home3/pragnesh/Logs/'
-#folder_path = f'{logDir}{program_name}/{selected_dataset_dir}/'
+# Logs Path
+log_dir       = f"{dir_home_path}Logs/{dir_specific_path}" 
 logResultFile = f'{log_dir}/result.log'
-outFile = f'{log_dir}/lastResult.log'
-outLogFile = f'{log_dir}/outLogFile.log'
+outFile       = f'{log_dir}/lastResult.log'
+outLogFile    = f'{log_dir}/outLogFile.log'
 
 
-# In[5]: Check Cuda Devices
+# In[4]: Check Cuda Devices
 if torch.cuda.is_available():
     device1 = torch.device('cuda')
 else:
     device1 = torch.device('cpu')
 
-opt_func = torch.optim.Adam
 
-# In[6]: Function to create folder if not exist
+# In[5]: Function to create folder if not exist
 def ensure_dir(dir_path):
     directory = os.path.dirname(dir_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
 
 
-# In[7]: Create output files if not present
 ensure_dir(f'{dir_home_path}Model/{program_name}/')
 ensure_dir(model_dir)
 ensure_dir(f'{dir_home_path}Logs/{program_name}/')
 ensure_dir(log_dir)
 
-# In[8]: Set Image Properties
+# In[6]: Set Image Properties
 dl.set_image_size(224)
 dl.set_batch_size = 16
 dataLoaders = dl.data_loader(set_datasets_arg=dataset_dir,
                              selected_dataset_arg=selected_dataset_dir,
                              train_arg=train_folder, test_arg=test_folder)
 
-# In[9]: Load appropriate model
+# In[7]: Load appropriate model
 if loadModel:  # Load the saved trained model
     new_model = torch.load(load_path, map_location=torch.device(device1))
 else:  # Load the standard model from library
@@ -87,23 +79,26 @@ else:  # Load the standard model from library
                               pretrainval=is_transfer_learning,
                               freeze_feature_arg=False, device_l=device1)
 
-# In[11]: Create require lists for pruning
-block_list = []; feature_list = []; conv_layer_index = []; module = []
-prune_count = []; new_list = []; candidate_conv_layer = []
+opt_func = torch.optim.Adam
+
+# In[8]: Create require lists for pruning
+block_list = []; feature_list = []; prune_count = []
+conv_layer_index = []; module = []
+new_list = []; candidate_conv_layer = []
 layer_number = 0; st = 0; en = 0
 
 
-# In[12]: Initialize list with proper values
 def initialize_lists_for_pruning():
-    global block_list, feature_list, conv_layer_index, prune_count, module
+    global block_list, feature_list, prune_count, conv_layer_index, module
+    
     block_list = ip.create_block_list(new_model)  # ip.getBlockList('vgg16')
     feature_list = ip.create_feature_list(new_model)
-    conv_layer_index = ip.find_conv_index(new_model)
     prune_count = ip.get_prune_count(module=module, blocks=block_list, max_pr=.1)
+    conv_layer_index = ip.find_conv_index(new_model)
     module = ip.make_list_conv_param(new_model)
 
 
-# In[13] Function to update the feature list after pruning
+# In[10] Function to update the feature list after pruning
 def update_feature_list(feature_list_l, prune_count_update, start=0, end=len(prune_count)):
     with open(outLogFile, "a") as out_file:
         out_file.write("\nupdate the feature list")
@@ -119,26 +114,6 @@ def update_feature_list(feature_list_l, prune_count_update, start=0, end=len(pru
             j += 1
             i += 1
     return feature_list_l
-
-
-# In[ ]:
-def compute_conv_layer_saliency_channel_pruning(module_cand_conv, block_list_l, block_id, k=1):
-    global layer_number
-    candidate_convolution_layer = []
-    end_index = 0
-    for bl in range(len(block_list_l)):
-        start_index = end_index
-        end_index = end_index + block_list_l[bl]
-        if bl != block_id:
-            continue
-
-        for lno in range(start_index, end_index):
-            # layer_number =st+i
-            candidate_convolution_layer.append(fp.compute_saliency_score_channel(
-                module_cand_conv[lno]._parameters['weight'],
-                n=1, dim_to_keep=[0], k=prune_count[lno]))
-        break
-    return candidate_convolution_layer
 
 
 # In[]
@@ -165,9 +140,34 @@ def compute_saliency_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=
 
     return score_value
 '''
-# In[ ]:
+
+
+# In[11]:
+def compute_conv_layer_saliency_channel_pruning(module_cand_conv, block_list_l, block_id, k=1):
+    global layer_number
+    candidate_convolution_layer = []
+    end_index = 0
+    for bl in range(len(block_list_l)):
+        start_index = end_index
+        end_index = end_index + block_list_l[bl]
+        if bl != block_id:
+            continue
+
+        for lno in range(start_index, end_index):
+            # layer_number =st+i
+            candidate_convolution_layer.append(
+                fp.compute_saliency_score_channel(module_cand_conv[lno]._parameters['weight'],
+                                                  n=1, 
+                                                  dim_to_keep=[0], 
+                                                  k=prune_count[lno]))
+        break
+    return candidate_convolution_layer
+
+
+# In[12]: Compute mask matrix using saliency score
 class ChannelPruningMethodSaliency(prune.BasePruningMethod):
     PRUNING_TYPE = 'unstructured'
+
 
     def compute_mask(self, t, default_mask):
         mask = default_mask.clone()
@@ -182,12 +182,23 @@ def channel_unstructured_saliency(module, name):
     ChannelPruningMethodSaliency.apply(module, name)
     return module
 
-# In[] Deep Copy
 
+# In[] Deep Copy: Copy nonzero parameter of prune model into new model
+'''
+def deep_model_copy_channelwise(source_model, destination_model, feature_list):
+    for l in range(len(source_model.features)):
+        if str(source_model.features[l]).find('Conv') != -1:
+            size_org = source_model.features[l]._parameters['weight'].shape
+            #size_new = destination_model.features[l]._parameters['weight'].shape
+            out_ch_new =0
+            for out_ch_old in range(size_org[0]):
+                if torch.norm(source_model.features[l]._parameters['weight'][out_ch_old] != 0):
+                    t = source_model.features[l]._parameters['weight'][out_ch_old]
+                    destination_model.features[l]._parameters['weight'][out_ch_new] = t
+                    out_ch_old +=1
+                
 
-
-
-
+'''
 
 
 
@@ -235,6 +246,7 @@ def iterative_channel_pruning_saliency_block_wise(new_model_arg, prune_module,
         
         # 9.  Perform deep copy
         lm.freeze(temp_model, 'vgg16')
+        fp.deep_model_copy_channelwise(new_model, temp_model, feature_list)
         #deep_copy(temp_model, new_model_arg)
         lm.unfreeze(temp_model)
         

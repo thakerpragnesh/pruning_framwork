@@ -2,14 +2,10 @@
 # coding: utf-8
 
 # In[1]:
-
-
 import torch
 
 
-# In[2]:
-
-
+# In[2]: 
 def compute_distance_score_kernel(tensor_t, n=1, dim_to_keep=[0, 1], prune_amount=1):
     # dims = all axes, except for the one identified by `dim`
     dim_to_prune = list(range(tensor_t.dim()))  # initially it has all dims
@@ -158,8 +154,36 @@ def compute_saliency_score_channel(tensor_t, n=1, dim_to_keep=[0], prune_amount=
 
 
 
-# In[ ]:
+# In[6]:
+def deep_copy_kernelwise(destination_model, source_model):
+    for i in range(len(source_model.features)):
+        if str(source_model.features[i]).find('Conv') != -1:
+            size_org = source_model.features[i]._parameters['weight'].shape
+            size_new = destination_model.features[i]._parameters['weight'].shape
+            for fin_org in range(size_org[1]):
+                j = 0
+                fin_new = fin_org
+                for fout in range(size_org[0]):
+                    if torch.norm(source_model.features[i]._parameters['weight'][fout][fin_org]) != 0:
+                        fin_new += 1
+                        if j >= size_new[0] or fin_new >= size_new[1]:
+                            break
+                        t = source_model.features[i]._parameters['weight'][fout][fin_org]
+                        destination_model.features[i]._parameters['weight'][j][fin_new] = t
+                        j = j + 1
 
 
-
+# In[7]
+def deep_model_copy_channelwise(source_model, destination_model, feature_list):
+    for l in range(len(source_model.features)):
+        if str(source_model.features[l]).find('Conv') != -1:
+            size_org = source_model.features[l]._parameters['weight'].shape
+            #size_new = destination_model.features[l]._parameters['weight'].shape
+            out_ch_new =0
+            for out_ch_old in range(size_org[0]):
+                if torch.norm(source_model.features[l]._parameters['weight'][out_ch_old] != 0):
+                    t = source_model.features[l]._parameters['weight'][out_ch_old]
+                    destination_model.features[l]._parameters['weight'][out_ch_new] = t
+                    out_ch_old +=1
+                
 
