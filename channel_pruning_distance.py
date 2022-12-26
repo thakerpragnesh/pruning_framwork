@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]: Import all the require files
+# In[1]: Import Packages
 import torch
 import load_dataset as dl
 import load_model as lm
